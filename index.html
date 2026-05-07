@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Vision Memo App</title>
+    <link rel="manifest" href="manifest.json">
+    <style>
+        :root { --primary: #4285F4; --bg: #f8f9fa; }
+        body { font-family: sans-serif; background: var(--bg); margin: 0; padding: 15px; }
+        .app-card { background: white; padding: 20px; border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        .btn { width: 100%; padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin-bottom: 10px; color: white; }
+        .btn-blue { background: var(--primary); }
+        .btn-purple { background: #673ab7; }
+        #video { width: 100%; border-radius: 10px; display: none; background: #000; }
+        #preview { width: 100%; border-radius: 10px; display: none; margin-top: 10px; }
+        .status { font-size: 0.85em; color: #666; text-align: center; margin-bottom: 10px; }
+    </style>
+</head>
+<body>
+
+<div class="app-card">
+    <h3 style="text-align:center; color:var(--primary);">📇 Vision Memo App</h3>
+    <div id="status" class="status">파일을 먼저 연결해 주세요.</div>
+
+    <button class="btn btn-purple" onclick="connectFile()">📂 1. 저장 파일 연결</button>
+    <button id="cam-btn" class="btn btn-blue" onclick="toggleCamera()">📸 2. 카메라 시작</button>
+
+    <video id="video" autoplay playsinline></video>
+    <button id="snap-btn" class="btn" style="display:none; background:#ea4335;" onclick="takePhoto()">📷 촬영하기</button>
+    
+    <img id="preview">
+    <canvas id="canvas" style="display:none;"></canvas>
+
+    <div id="edit-area" style="display:none; margin-top:15px; border-top:1px solid #eee; padding-top:15px;">
+        <p id="result-text" style="font-weight:bold;"></p>
+        <input type="text" id="memo" placeholder="추가 메모 입력" style="width:100%; padding:10px; box-sizing:border-box; border:1px solid #ddd; border-radius:5px;">
+        <button class="btn btn-blue" style="margin-top:10px;" onclick="finalSave()">💾 누적 저장</button>
+    </div>
+</div>
+
+<script>
+    const API_KEY = 'AIzaSyCWZADWBtUnUNKKo6VyDC-NNe9L5z-MEjE'; // 본인의 API 키 입력
+    let fileHandle, stream, currentInfo = "";
+
+    // [1] 파일 연결
+    async function connectFile() {
+        try {
+            fileHandle = await window.showSaveFilePicker({
+                suggestedName: 'memo_db.csv',
+                types: [{ description: 'CSV', accept: { 'text/csv': ['.csv'] } }]
+            });
+            document.getElementById('status').textContent = "✅ 파일 연결됨: " + fileHandle.name;
+        } catch (e) { alert("연결 취소"); }
+    }
+
+    // [2] 카메라 제어
+    async function toggleCamera() {
+        if (stream) {
+            stopCamera();
+            return;
+        }
+        try {
+            stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+            const video = document.getElementById('video');
+            video.srcObject = stream;
+            video.style.display = 'block';
+            document.getElementById('snap-btn').style.display = 'block';
+            document.getElementById('cam-btn').textContent = "❌ 카메라 종료";
+        } catch (err) { alert("카메라 권한 필요"); }
+    }
+
+    function stopCamera() {
+        stream.getTracks().forEach(t => t.stop());
+        stream = null;
+        document.getElementById('video').style.display = 'none';
+        document.getElementById('snap-btn').style.display = 'none';
+        document.getElementById('cam-btn').textContent = "📸 2. 카메라 시작";
+    }
+
+    // [3] 촬영 및 분석
+    async function takePhoto() {
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        canvas.getContext('2d').drawImage(video, 0, 0);
+
+        const base64 = canvas.toDataURL('image/jpeg').split(',')[1];
+        document.getElementById('preview').src = canvas.toDataURL('image/jpeg');
+        document.getElementById('preview').style.display = 'block';
+        
+        stopCamera();
+        analyze(base64);
+    }
+
+    async function analyze(content) {
+        document.getElementById('status').textContent = "⏳ 분석 중...";
+        const url = `https://vision.googleapis.com/v1/images:annotate?key=${API_KEY}`;
+        const res = await fetch(url, {
+            method: 'POST',
+            body: JSON.stringify({ requests: [{ image: { content }, features: [{ type: 'TEXT_DETECTION' }] }] })
+        });
+        const data = await res.json();
+        currentInfo = data.responses[0].fullTextAnnotation.text.split('\n')[0];
+        document.getElementById('result-text').textContent = "인식: " + currentInfo;
+        document.getElementById('edit-area').style.display = 'block';
+        document.getElementById('status').textContent = "분석 완료";
+    }
+
+    // [4] 파일 누적 저장
+    async function finalSave() {
+        const memo = document.getElementById('memo').value;
+        if (!fileHandle) { alert("파일을 먼저 연결하세요"); return; }
+
+        const writable = await fileHandle.createWritable({ keepExistingData: true });
+        const file = await fileHandle.getFile();
+        const row = `"${currentInfo}","${memo}"\n`;
+        await writable.write({ type: 'write', position: file.size, data: row });
+        await writable.close();
+
+        alert("저장 완료!");
+        document.getElementById('edit-area').style.display = 'none';
+        document.getElementById('preview').style.display = 'none';
+    }
+
+    // 서비스 워커 등록
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('sw.js');
+    }
+</script>
+</body>
+</html>
