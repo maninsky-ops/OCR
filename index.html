@@ -223,33 +223,47 @@ function parseBusinessCard(text, largestText) {
 
     // 6. 휴대폰 연락처(.vcf) 생성 및 실행
     function addToContacts() {
-        const name = document.getElementById('res-name').value;
-        const company = document.getElementById('res-company').value;
-        const phone = document.getElementById('res-phone').value;
-        const email = document.getElementById('res-email').value;
+    const name = document.getElementById('res-name').value;
+    const company = document.getElementById('res-company').value;
+    const phone = document.getElementById('res-phone').value;
+    const email = document.getElementById('res-email').value;
+    const memo = document.getElementById('res-memo').value; // 메모 값 가져오기
 
-        if (!name || !phone) { alert("이름과 번호가 필요합니다."); return; }
-
-        const vcard = [
-            "BEGIN:VCARD", "VERSION:3.0",
-            `FN:${name}`, `ORG:${company}`,
-            `TEL;TYPE=CELL:${phone}`, `EMAIL:${email}`,
-            "END:VCARD"
-        ].join("\n");
-
-        const blob = new Blob([vcard], { type: 'text/vcard;charset=utf-8' });
-        const url = window.URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `${name}.vcf`;
-        link.click();
-        window.URL.revokeObjectURL(url);
+    if (!name || !phone) {
+        alert("이름과 번호가 필요합니다.");
+        return;
     }
 
-    // 서비스 워커 등록 (PWA용)
-    if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('sw.js').catch(() => {});
+    // vCard 데이터 구성
+    const vcardLines = [
+        "BEGIN:VCARD",
+        "VERSION:3.0",
+        `FN:${name}`,
+        `ORG:${company}`,
+        `TEL;TYPE=CELL:${phone}`,
+        `EMAIL:${email}`
+    ];
+
+    // 메모(NOTE)가 있을 경우에만 추가
+    if (memo) {
+        // vCard 규격상 줄바꿈은 \n으로 치환되어야 하며 특수문자 처리가 필요할 수 있음
+        const cleanMemo = memo.replace(/\n/g, "\\n");
+        vcardLines.push(`NOTE:${cleanMemo}`);
     }
+
+    vcardLines.push("END:VCARD");
+
+    const vcard = vcardLines.join("\n");
+
+    // 파일 생성 및 실행
+    const blob = new Blob([vcard], { type: 'text/vcard;charset=utf-8' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${name}.vcf`;
+    link.click();
+    window.URL.revokeObjectURL(url);
+}
 </script>
 </body>
 </html>
