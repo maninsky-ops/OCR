@@ -1,69 +1,81 @@
-<!DOCTYPE html>
+   <!DOCTYPE html>
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Vision Memo Pro</title>
     <link rel="manifest" href="manifest.json">
     <style>
-        :root { --primary: #4285F4; --bg: #f8f9fa; --purple: #673ab7; --green: #34A853; }
-        body { font-family: sans-serif; background: var(--bg); padding: 15px; margin: 0; }
+        :root { --primary: #4285F4; --success: #34A853; --purple: #673ab7; --warning: #f4b400; --bg: #f8f9fa; }
+        body { font-family: 'Malgun Gothic', sans-serif; background: var(--bg); padding: 15px; margin: 0; }
         .container { max-width: 500px; margin: auto; background: white; padding: 20px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
-        .btn { width: 100%; padding: 14px; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; margin-bottom: 12px; color: white; font-size: 16px; transition: opacity 0.2s; }
-        .btn:active { opacity: 0.8; }
+        .btn { width: 100%; padding: 14px; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; margin-bottom: 12px; color: white; font-size: 16px; transition: 0.2s; }
+        .btn:active { opacity: 0.7; transform: scale(0.98); }
         .btn-file { background: var(--purple); }
         .btn-cam { background: var(--primary); }
-        .btn-gallery { background: var(--green); }
-        #status { text-align: center; margin-bottom: 15px; color: #666; font-size: 14px; }
-        #preview { width: 100%; border-radius: 10px; display: none; margin-bottom: 15px; }
-        .edit-fields { display: none; background: #e8f0fe; padding: 15px; border-radius: 10px; }
-        .edit-fields input { width: 100%; padding: 10px; margin: 5px 0 10px 0; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; }
-        label { font-size: 12px; font-weight: bold; color: var(--primary); }
+        .btn-gallery { background: var(--success); }
+        .btn-contact { background: var(--warning); color: #333; }
+        #status { text-align: center; margin-bottom: 15px; color: #666; font-size: 14px; min-height: 20px; }
+        #preview { width: 100%; border-radius: 10px; display: none; margin-bottom: 15px; border: 1px solid #ddd; }
+        .edit-fields { display: none; background: #f0f4ff; padding: 15px; border-radius: 10px; border: 1px solid #d1d9ff; }
+        .edit-fields input { width: 100%; padding: 12px; margin: 5px 0 12px 0; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box; font-size: 15px; }
+        label { font-size: 12px; font-weight: bold; color: var(--primary); margin-left: 2px; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h2 style="text-align:center; color:var(--primary);">📇 명함 인식 매니저</h2>
-    <div id="status">파일 연결 후 아래 버튼을 선택하세요.</div>
+    <h2 style="text-align:center; color:var(--primary); margin-top:0;">📇 Vision Memo App</h2>
+    <div id="status">파일 연결 후 작업을 시작하세요.</div>
 
-    <button class="btn btn-file" onclick="connectFile()">📂 1. 저장 파일 연결</button>
+    <!-- 1단계: 파일 연결 -->
+    <button class="btn btn-file" onclick="connectFile()">📂 1. 저장용 CSV 파일 연결</button>
     
-    <!-- 카메라 전용 입력창 (숨김) -->
-    <input type="file" id="camera-input" accept="image/*" capture="environment" style="display:none;" onchange="handleImage(this)">
-    <button class="btn btn-cam" onclick="document.getElementById('camera-input').click()">📸 2. 명함 새로 촬영</button>
+    <!-- 2단계: 이미지 입력 섹션 -->
+    <div style="display: flex; gap: 10px;">
+        <input type="file" id="camera-input" accept="image/*" capture="environment" style="display:none;" onchange="handleImage(this)">
+        <button class="btn btn-cam" onclick="document.getElementById('camera-input').click()">📸 카메라 촬영</button>
 
-    <!-- 갤러리 전용 입력창 (숨김) -->
-    <input type="file" id="gallery-input" accept="image/*" style="display:none;" onchange="handleImage(this)">
-    <button class="btn btn-gallery" onclick="document.getElementById('gallery-input').click()">🖼️ 3. 갤러리에서 선택</button>
+        <input type="file" id="gallery-input" accept="image/*" style="display:none;" onchange="handleImage(this)">
+        <button class="btn btn-gallery" onclick="document.getElementById('gallery-input').click()">🖼️ 갤러리 선택</button>
+    </div>
 
     <img id="preview">
 
+    <!-- 3단계: 분석 결과 확인 및 저장 -->
     <div id="edit-fields" class="edit-fields">
-        <strong>🔍 인식 결과 (수정 가능)</strong><br><br>
-        <label>회사</label><input type="text" id="res-company">
-        <label>이름/직책</label><input type="text" id="res-name">
+        <strong style="display:block; margin-bottom:10px; color:#333;">🔍 인식 결과 (수정 가능)</strong>
+        <label>회사명</label><input type="text" id="res-company">
+        <label>이름 및 직책</label><input type="text" id="res-name">
         <label>전화번호</label><input type="text" id="res-phone">
         <label>이메일</label><input type="text" id="res-email">
-        <label>메모</label><input type="text" id="res-memo" placeholder="메모 입력">
-        <button class="btn btn-cam" style="margin-top:10px;" onclick="saveData()">💾 CSV 누적 저장</button>
+        <label>비고(메모)</label><input type="text" id="res-memo" placeholder="추가 정보 입력">
+        
+        <button class="btn btn-cam" onclick="saveData()">💾 CSV 파일에 누적 저장</button>
+        <button class="btn btn-contact" onclick="addToContacts()">👤 휴대폰 연락처에 추가</button>
     </div>
 </div>
 
 <script>
+    // [설정] 본인의 Google Vision API 키를 입력하세요.
     const API_KEY = 'AIzaSyCWZADWBtUnUNKKo6VyDC-NNe9L5z-MEjE'; 
     let fileHandle = null;
 
+    // 1. CSV 파일 시스템 연결
     async function connectFile() {
         try {
             fileHandle = await window.showSaveFilePicker({
-                suggestedName: 'business_cards.csv',
-                types: [{ description: 'CSV', accept: { 'text/csv': ['.csv'] } }]
+                suggestedName: '명함리스트.csv',
+                types: [{ description: 'CSV 파일', accept: { 'text/csv': ['.csv'] } }]
             });
-            document.getElementById('status').textContent = "✅ 파일 연결됨: " + fileHandle.name;
-        } catch (e) { console.log("연결 취소"); }
+            document.getElementById('status').textContent = "✅ 연결됨: " + fileHandle.name;
+            document.getElementById('status').style.color = "var(--success)";
+        } catch (e) {
+            console.log("파일 연결 취소");
+        }
     }
 
+    // 2. 이미지 파일 처리
     async function handleImage(input) {
         const file = input.files[0];
         if (!file) return;
@@ -76,39 +88,54 @@
         const reader = new FileReader();
         reader.onload = async (e) => {
             const base64 = e.target.result.split(',')[1];
-            analyze(base64);
+            await analyzeImage(base64);
         };
         reader.readAsDataURL(file);
-        
-        // 같은 파일을 다시 선택할 수 있도록 input 초기화
-        input.value = "";
+        input.value = ""; // 입력 초기화
     }
 
-    async function analyze(base64) {
-        document.getElementById('status').textContent = "⏳ AI 분석 중...";
+    // 3. Vision API 분석
+    async function analyzeImage(base64) {
+        const status = document.getElementById('status');
+        status.textContent = "⏳ AI 분석 중...";
+        status.style.color = "#666";
+
         try {
             const response = await fetch(`https://vision.googleapis.com/v1/images:annotate?key=${API_KEY}`, {
                 method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    requests: [{ image: { content: base64 }, features: [{ type: 'TEXT_DETECTION' }] }]
+                    requests: [{
+                        image: { content: base64 },
+                        features: [{ type: 'TEXT_DETECTION' }]
+                    }]
                 })
             });
+
             const data = await response.json();
-            if (data.responses[0].fullTextAnnotation) {
-                parseAndDisplay(data.responses[0].fullTextAnnotation.text);
+            if (data.error) throw new Error(data.error.message);
+
+            const text = data.responses[0].fullTextAnnotation?.text;
+            if (text) {
+                parseBusinessCard(text);
+                status.textContent = "✅ 분석 완료";
             } else {
-                throw new Error("텍스트를 찾을 수 없습니다.");
+                throw new Error("글자를 인식하지 못했습니다.");
             }
         } catch (err) {
-            document.getElementById('status').textContent = "❌ 분석 실패: " + err.message;
+            alert("분석 오류: " + err.message);
+            status.textContent = "❌ 분석 실패";
         }
     }
 
-    function parseAndDisplay(text) {
+    // 4. 텍스트 파싱 (이름, 번호, 이메일 추출)
+    function parseBusinessCard(text) {
         const lines = text.split('\n').map(s => s.trim());
+        
         const email = text.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/)?.[0] || "";
         const phone = text.match(/01[016789][-.\s]?\d{3,4}[-.\s]?\d{4}/)?.[0] || "";
         const company = lines.find(l => ["주식회사", "(주)", "Corp", "Ltd", "Inc"].some(k => l.includes(k))) || lines[0];
+        
         const ranks = ["대표", "이사", "부장", "팀장", "과장", "대리", "사원", "CEO", "본부장", "실장"];
         const nameLine = lines.find(l => ranks.some(r => l.includes(r))) || lines[1] || "확인 필요";
 
@@ -118,41 +145,68 @@
         document.getElementById('res-email').value = email;
         
         document.getElementById('edit-fields').style.display = 'block';
-        document.getElementById('status').textContent = "✅ 분석 완료";
     }
 
-   async function saveData() {
-    if (!fileHandle) { alert("파일을 먼저 연결하세요!"); return; }
+    // 5. CSV 파일에 데이터 쓰기
+    async function saveData() {
+        if (!fileHandle) { alert("먼저 [저장용 CSV 파일 연결] 버튼을 눌러주세요."); return; }
 
-    // CSV 행 데이터 생성
-    const row = [
-        document.getElementById('res-company').value,
-        document.getElementById('res-name').value,
-        document.getElementById('res-phone').value,
-        document.getElementById('res-email').value,
-        document.getElementById('res-memo').value
-    ].map(v => `"${v}"`).join(",") + "\n";
+        const values = [
+            document.getElementById('res-company').value,
+            document.getElementById('res-name').value,
+            document.getElementById('res-phone').value,
+            document.getElementById('res-email').value,
+            document.getElementById('res-memo').value
+        ];
+        const row = values.map(v => `"${v}"`).join(",") + "\n";
 
-    try {
-        const writable = await fileHandle.createWritable({ keepExistingData: true });
-        const file = await fileHandle.getFile();
-        
-        // 파일이 비어있다면(새 파일) UTF-8 BOM(\ufeff)을 처음에 추가하여 엑셀 한글 깨짐 방지
-        if (file.size === 0) {
-            await writable.write("\ufeff"); 
+        try {
+            const writable = await fileHandle.createWritable({ keepExistingData: true });
+            const file = await fileHandle.getFile();
+            
+            // 파일이 처음 생성되는 경우 한글 깨짐 방지 BOM 추가
+            if (file.size === 0) await writable.write("\ufeff");
+
+            await writable.write({ type: 'write', position: file.size, data: row });
+            await writable.close();
+            
+            alert("CSV 파일에 저장되었습니다.");
+            document.getElementById('edit-fields').style.display = 'none';
+            document.getElementById('preview').style.display = 'none';
+        } catch (err) {
+            alert("저장 실패: " + err.message);
         }
-
-        await writable.write({ type: 'write', position: file.size, data: row });
-        await writable.close();
-        alert("성공적으로 누적 저장되었습니다!");
-        
-        // 입력 필드 초기화
-        document.getElementById('edit-fields').style.display = 'none';
-        document.getElementById('preview').style.display = 'none';
-    } catch (err) { 
-        alert("저장 실패: " + err.message); 
     }
-}
+
+    // 6. 휴대폰 연락처(.vcf) 생성 및 실행
+    function addToContacts() {
+        const name = document.getElementById('res-name').value;
+        const company = document.getElementById('res-company').value;
+        const phone = document.getElementById('res-phone').value;
+        const email = document.getElementById('res-email').value;
+
+        if (!name || !phone) { alert("이름과 번호가 필요합니다."); return; }
+
+        const vcard = [
+            "BEGIN:VCARD", "VERSION:3.0",
+            `FN:${name}`, `ORG:${company}`,
+            `TEL;TYPE=CELL:${phone}`, `EMAIL:${email}`,
+            "END:VCARD"
+        ].join("\n");
+
+        const blob = new Blob([vcard], { type: 'text/vcard;charset=utf-8' });
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `${name}.vcf`;
+        link.click();
+        window.URL.revokeObjectURL(url);
+    }
+
+    // 서비스 워커 등록 (PWA용)
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('sw.js').catch(() => {});
+    }
 </script>
 </body>
 </html>
