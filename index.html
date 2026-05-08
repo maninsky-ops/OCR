@@ -121,26 +121,38 @@
         document.getElementById('status').textContent = "✅ 분석 완료";
     }
 
-    async function saveData() {
-        if (!fileHandle) { alert("파일을 먼저 연결하세요!"); return; }
-        const row = [
-            document.getElementById('res-company').value,
-            document.getElementById('res-name').value,
-            document.getElementById('res-phone').value,
-            document.getElementById('res-email').value,
-            document.getElementById('res-memo').value
-        ].map(v => `"${v}"`).join(",") + "\n";
+   async function saveData() {
+    if (!fileHandle) { alert("파일을 먼저 연결하세요!"); return; }
 
-        try {
-            const writable = await fileHandle.createWritable({ keepExistingData: true });
-            const file = await fileHandle.getFile();
-            await writable.write({ type: 'write', position: file.size, data: row });
-            await writable.close();
-            alert("저장 성공!");
-            document.getElementById('edit-fields').style.display = 'none';
-            document.getElementById('preview').style.display = 'none';
-        } catch (err) { alert("저장 실패: " + err.message); }
+    // CSV 행 데이터 생성
+    const row = [
+        document.getElementById('res-company').value,
+        document.getElementById('res-name').value,
+        document.getElementById('res-phone').value,
+        document.getElementById('res-email').value,
+        document.getElementById('res-memo').value
+    ].map(v => `"${v}"`).join(",") + "\n";
+
+    try {
+        const writable = await fileHandle.createWritable({ keepExistingData: true });
+        const file = await fileHandle.getFile();
+        
+        // 파일이 비어있다면(새 파일) UTF-8 BOM(\ufeff)을 처음에 추가하여 엑셀 한글 깨짐 방지
+        if (file.size === 0) {
+            await writable.write("\ufeff"); 
+        }
+
+        await writable.write({ type: 'write', position: file.size, data: row });
+        await writable.close();
+        alert("성공적으로 누적 저장되었습니다!");
+        
+        // 입력 필드 초기화
+        document.getElementById('edit-fields').style.display = 'none';
+        document.getElementById('preview').style.display = 'none';
+    } catch (err) { 
+        alert("저장 실패: " + err.message); 
     }
+}
 </script>
 </body>
 </html>
